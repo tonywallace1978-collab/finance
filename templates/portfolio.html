@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Full Portfolio - Financial Tracker{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Complete Portfolio</h1>
+
+<!-- Summary Card -->
+<div class="card mb-4 shadow">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">Portfolio Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <h6 class="text-muted">Total Value</h6>
+                <h4>${{ "{:,.2f}".format(total_value) }}</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted">Cost Basis</h6>
+                <h4>${{ "{:,.2f}".format(total_cost_basis) }}</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted">Total Assets</h6>
+                <h4>{{ assets|length }}</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted">Total Gain/Loss</h6>
+                <h4 class="{% if total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                    {{ "{:+,.2f}".format(total_gain_dollar) }}<br>
+                    <small>({{ "{:+.2f}".format(total_gain_percent) }}%)</small>
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Assets Table -->
+<div class="card shadow">
+    <div class="card-header">
+        <h5 class="mb-0">All Holdings ({{ assets|length }} assets)</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Location</th>
+                        <th>Ticker</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th class="text-end">Quantity</th>
+                        <th class="text-end">Avg Cost</th>
+                        <th class="text-end">Current Price</th>
+                        <th class="text-end">Current Value</th>
+                        <th class="text-end">Change</th>
+                        <th class="text-end">Total Gain/Loss</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in assets %}
+                    <tr>
+                        <td>
+                            {% if item.asset.location == 'Etrade' %}
+                            <span class="badge bg-primary">E*Trade</span>
+                            {% elif item.asset.location == 'Coinbase' %}
+                            <span class="badge" style="background-color: #0052ff;">Coinbase</span>
+                            {% elif item.asset.location == 'Hard Wallet' %}
+                            <span class="badge" style="background-color: #6f42c1;">L Wallet</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ item.asset.location }}</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ item.asset.ticker }}</strong></td>
+                        <td>{{ item.asset.company_name or '-' }}</td>
+                        <td><span class="badge bg-secondary">{{ item.asset.classification }}</span></td>
+                        <td class="text-end">{{ "{:,.6f}".format(item.asset.quantity) }}</td>
+                        <td class="text-end">${{ "{:,.2f}".format(item.asset.price_paid) }}</td>
+                        <td class="text-end">${{ "{:,.2f}".format(item.current_price) }}</td>
+                        <td class="text-end"><strong>${{ "{:,.2f}".format(item.current_value) }}</strong></td>
+                        <td class="text-end {% if item.day_change_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                            {{ "{:+,.2f}".format(item.day_change_dollar) }}<br>
+                            <small>({{ "{:+.2f}".format(item.day_change_percent) }}%)</small>
+                        </td>
+                        <td class="text-end {% if item.total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                            {{ "{:+,.2f}".format(item.total_gain_dollar) }}<br>
+                            <small>({{ "{:+.2f}".format(item.total_gain_percent) }}%)</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="7" class="text-end"><strong>Total:</strong></td>
+                        <td class="text-end"><strong>${{ "{:,.2f}".format(total_value) }}</strong></td>
+                        <td></td>
+                        <td class="text-end {% if total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                            <strong>{{ "{:+,.2f}".format(total_gain_dollar) }}</strong><br>
+                            <small>({{ "{:+.2f}".format(total_gain_percent) }}%)</small>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+{% endblock %}

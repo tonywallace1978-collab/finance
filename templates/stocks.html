@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}E*Trade Stocks - Financial Tracker{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">E*Trade Portfolio</h1>
+
+<!-- Summary Card -->
+<div class="card mb-4 shadow location-card etrade">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Portfolio Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <h6 class="text-muted">Total Value</h6>
+                <h4>${{ "{:,.2f}".format(summary.total_value) }}</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted">Cost Basis</h6>
+                <h4>${{ "{:,.2f}".format(summary.total_cost_basis) }}</h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted">Today's Change</h6>
+                <h4 class="{% if summary.day_change_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                    {{ "{:+,.2f}".format(summary.day_change_dollar) }}
+                </h4>
+            </div>
+            <div class="col-md-3">
+                <h6 class="text-muted">Total Gain/Loss</h6>
+                <h4 class="{% if summary.total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                    {{ "{:+,.2f}".format(summary.total_gain_dollar) }}<br>
+                    <small>({{ "{:+.2f}".format(summary.total_gain_percent) }}%)</small>
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assets Table -->
+<div class="card shadow">
+    <div class="card-header">
+        <h5 class="mb-0">Holdings ({{ summary.asset_count }} assets)</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Company</th>
+                        <th>Type</th>
+                        <th class="text-end">Quantity</th>
+                        <th class="text-end">Avg Cost</th>
+                        <th class="text-end">Current Price</th>
+                        <th class="text-end">Current Value</th>
+                        <th class="text-end">Day Change</th>
+                        <th class="text-end">Total Gain/Loss</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in summary.assets %}
+                    <tr>
+                        <td><strong>{{ item.asset.ticker }}</strong></td>
+                        <td>{{ item.asset.company_name or '-' }}</td>
+                        <td><span class="badge bg-secondary">{{ item.asset.classification }}</span></td>
+                        <td class="text-end">{{ "{:,.4f}".format(item.asset.quantity) }}</td>
+                        <td class="text-end">${{ "{:,.2f}".format(item.asset.price_paid) }}</td>
+                        <td class="text-end">${{ "{:,.2f}".format(item.current_price) }}</td>
+                        <td class="text-end"><strong>${{ "{:,.2f}".format(item.current_value) }}</strong></td>
+                        <td class="text-end {% if item.day_change_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                            {{ "{:+,.2f}".format(item.day_change_dollar) }}<br>
+                            <small>({{ "{:+.2f}".format(item.day_change_percent) }}%)</small>
+                        </td>
+                        <td class="text-end {% if item.total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                            {{ "{:+,.2f}".format(item.total_gain_dollar) }}<br>
+                            <small>({{ "{:+.2f}".format(item.total_gain_percent) }}%)</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+    <a href="/portfolio" class="btn btn-outline-primary">View Full Portfolio</a>
+</div>
+
+{% endblock %}

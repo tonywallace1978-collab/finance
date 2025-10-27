@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Financial Tracker{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Financial Dashboard</h1>
+
+<!-- Total Net Worth Card -->
+<div class="card mb-4 shadow">
+    <div class="card-body text-center">
+        <h5 class="card-title text-muted">Total Net Worth</h5>
+        <h2 class="display-4 mb-3">${{ "{:,.2f}".format(total_net_worth) }}</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-0"><strong>Today's Change</strong></p>
+                <h4 class="{% if total_day_change >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                    {{ "{:+,.2f}".format(total_day_change) }}
+                </h4>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-0"><strong>Total Gain/Loss</strong></p>
+                <h4 class="{% if total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                    {{ "{:+,.2f}".format(total_gain_dollar) }}
+                    ({{ "{:+.2f}".format(total_gain_percent) }}%)
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Summary Cards -->
+<div class="row mb-4">
+    <!-- E*Trade Card -->
+    <div class="col-md-4">
+        <div class="card stat-card location-card etrade shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">E*Trade</h5>
+            </div>
+            <div class="card-body">
+                <h4>${{ "{:,.2f}".format(etrade.total_value) }}</h4>
+                <p class="text-muted mb-2">{{ etrade.asset_count }} assets</p>
+                <hr>
+                <div class="small">
+                    <strong>Today's Change:</strong><br>
+                    <span class="{% if etrade.day_change_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        {{ "{:+,.2f}".format(etrade.day_change_dollar) }}
+                    </span>
+                </div>
+                <div class="small mt-2">
+                    <strong>Total Gain/Loss:</strong><br>
+                    <span class="{% if etrade.total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        {{ "{:+,.2f}".format(etrade.total_gain_dollar) }}
+                        ({{ "{:+.2f}".format(etrade.total_gain_percent) }}%)
+                    </span>
+                </div>
+                <a href="/stocks" class="btn btn-primary btn-sm mt-3 w-100">View Details</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coinbase Card -->
+    <div class="col-md-4">
+        <div class="card stat-card location-card coinbase shadow-sm h-100">
+            <div class="card-header text-white" style="background-color: #0052ff;">
+                <h5 class="mb-0">Coinbase</h5>
+            </div>
+            <div class="card-body">
+                <h4>${{ "{:,.2f}".format(coinbase.total_value) }}</h4>
+                <p class="text-muted mb-2">{{ coinbase.asset_count }} assets</p>
+                <hr>
+                <div class="small">
+                    <strong>Today's Change:</strong><br>
+                    <span class="{% if coinbase.day_change_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        {{ "{:+,.2f}".format(coinbase.day_change_dollar) }}
+                    </span>
+                </div>
+                <div class="small mt-2">
+                    <strong>Total Gain/Loss:</strong><br>
+                    <span class="{% if coinbase.total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        {{ "{:+,.2f}".format(coinbase.total_gain_dollar) }}
+                        ({{ "{:+.2f}".format(coinbase.total_gain_percent) }}%)
+                    </span>
+                </div>
+                <a href="/crypto-coinbase" class="btn btn-sm mt-3 w-100 text-white" style="background-color: #0052ff;">View Details</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hard Wallet Card -->
+    <div class="col-md-4">
+        <div class="card stat-card location-card hardwallet shadow-sm h-100">
+            <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                <h5 class="mb-0">L Wallet (Hard Wallet)</h5>
+            </div>
+            <div class="card-body">
+                <h4>${{ "{:,.2f}".format(hardwallet.total_value) }}</h4>
+                <p class="text-muted mb-2">{{ hardwallet.asset_count }} assets</p>
+                <hr>
+                <div class="small">
+                    <strong>Today's Change:</strong><br>
+                    <span class="{% if hardwallet.day_change_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        {{ "{:+,.2f}".format(hardwallet.day_change_dollar) }}
+                    </span>
+                </div>
+                <div class="small mt-2">
+                    <strong>Total Gain/Loss:</strong><br>
+                    <span class="{% if hardwallet.total_gain_dollar >= 0 %}gain-positive{% else %}gain-negative{% endif %}">
+                        {{ "{:+,.2f}".format(hardwallet.total_gain_dollar) }}
+                        ({{ "{:+.2f}".format(hardwallet.total_gain_percent) }}%)
+                    </span>
+                </div>
+                <a href="/crypto-l" class="btn btn-sm mt-3 w-100 text-white" style="background-color: #6f42c1;">View Details</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Portfolio Distribution</h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h6 class="text-muted">E*Trade</h6>
+                <h5>{{ "{:.1f}".format((etrade.total_value / total_net_worth * 100) if total_net_worth > 0 else 0) }}%</h5>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">Coinbase</h6>
+                <h5>{{ "{:.1f}".format((coinbase.total_value / total_net_worth * 100) if total_net_worth > 0 else 0) }}%</h5>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">L Wallet</h6>
+                <h5>{{ "{:.1f}".format((hardwallet.total_value / total_net_worth * 100) if total_net_worth > 0 else 0) }}%</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if last_update %}
+<div class="alert alert-info mt-4">
+    Last price update: {{ last_update.strftime('%Y-%m-%d %I:%M %p UTC') }}
+</div>
+{% endif %}
+
+{% endblock %}
