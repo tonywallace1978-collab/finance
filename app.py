@@ -1,18 +1,42 @@
-from flask import Flask, render_template, jsonify, redirect, url_for, request
-from models import db, Asset, AssetPrice, ManualEntry, BusinessMetrics, Expense
+from flask import Flask, render_template, jsonify, redirect, url_for, request, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from models import db, Asset, AssetPrice, ManualEntry, BusinessMetrics, Expense, User
 from price_fetcher import PriceFetcher
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
 # Configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/finance.db'
+# Use PostgreSQL if DATABASE_URL is set (Railway), otherwise use SQLite (local)
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    # Railway uses postgres:// but SQLAlchemy needs postgresql://
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/finance.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'your-secret-key-change-this'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Initialize database
 db.init_app(app)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # Initialize price fetcher
 price_fetcher = PriceFetcher()
@@ -114,7 +138,42 @@ def get_net_worth():
     return assets - liabilities
 
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """User login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(username=username).first()
+
+        if user and user.check_password(password):
+            login_user(user)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
+            next_page = request.args.get('next')
+            return redirect(next_page if next_page else url_for('dashboard'))
+        else:
+            flash('Invalid username or password', 'error')
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """User logout"""
+    logout_user()
+    flash('You have been logged out', 'info')
+    return redirect(url_for('login'))
+
+
 @app.route('/')
+@login_required
 def dashboard():
     """Main dashboard showing complete financial overview"""
 
@@ -147,6 +206,7 @@ def dashboard():
 
 
 @app.route('/stocks')
+@login_required
 def stocks():
     """E*Trade stocks and ETFs page"""
     summary = get_location_summary('Etrade')
@@ -154,6 +214,7 @@ def stocks():
 
 
 @app.route('/crypto-coinbase')
+@login_required
 def crypto_coinbase():
     """Coinbase crypto holdings page"""
     summary = get_location_summary('Coinbase')
@@ -161,6 +222,7 @@ def crypto_coinbase():
 
 
 @app.route('/crypto-l')
+@login_required
 def crypto_l():
     """Hard Wallet (L Wallet) crypto holdings page"""
     summary = get_location_summary('Hard Wallet')
@@ -168,6 +230,7 @@ def crypto_l():
 
 
 @app.route('/portfolio')
+@login_required
 def portfolio():
     """All assets across all locations"""
     assets = Asset.query.all()
@@ -198,6 +261,7 @@ def portfolio():
 
 
 @app.route('/manual-entries')
+@login_required
 def manual_entries():
     """View and edit manual entries"""
     entries = ManualEntry.query.all()
@@ -205,6 +269,7 @@ def manual_entries():
 
 
 @app.route('/business')
+@login_required
 def business():
     """Business metrics dashboard"""
     metrics = BusinessMetrics.query.order_by(BusinessMetrics.date.desc()).all()
@@ -212,6 +277,7 @@ def business():
 
 
 @app.route('/api/manual-entry/update', methods=['POST'])
+@login_required
 def update_manual_entry():
     """API endpoint to update manual entry value"""
     data = request.json
@@ -228,6 +294,7 @@ def update_manual_entry():
 
 
 @app.route('/api/update-prices', methods=['POST'])
+@login_required
 def api_update_prices():
     """API endpoint to trigger price update"""
     try:
@@ -253,6 +320,7 @@ def api_update_prices():
 
 
 @app.route('/update-prices')
+@login_required
 def update_prices():
     """Manually trigger price update for all assets (GET request)"""
     try:

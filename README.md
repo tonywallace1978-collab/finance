@@ -2,6 +2,26 @@
 
 A comprehensive Flask-based financial tracking application that provides a complete view of your net worth, including investments, retirement accounts, cash, property, debt, and business metrics.
 
+**🚀 NEW: Deploy to Railway.app and access from anywhere! See [RAILWAY_DEPLOYMENT_GUIDE.md](RAILWAY_DEPLOYMENT_GUIDE.md)**
+
+## Deployment Options
+
+### Option 1: Railway.app (Recommended - Access from Anywhere)
+- ✅ Free tier available ($5 credit/month)
+- ✅ Secure login with username/password
+- ✅ PostgreSQL database included
+- ✅ HTTPS encryption automatic
+- ✅ Access from any device (computer, phone, tablet)
+- ✅ Auto-updates when you push to GitHub
+- 📖 **[Full Deployment Guide](RAILWAY_DEPLOYMENT_GUIDE.md)**
+
+### Option 2: Local (Run on Your Computer)
+- ✅ Free
+- ✅ Keep data on your computer
+- ✅ No internet required
+- ❌ Only accessible from local computer
+- 📖 See "Setup Instructions" below
+
 ## Key Features
 
 ### Investment Tracking
