@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Financial Dashboard - Complete Overview{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Net Worth Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-lg border-0">
+                <div class="card-body text-center py-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h1 class="display-3 mb-2">${{ "{:,.2f}".format(net_worth) }}</h1>
+                    <h5 class="mb-0">Total Net Worth</h5>
+                    {% if last_update %}
+                    <small class="text-white-50">Last updated: {{ last_update.strftime('%Y-%m-%d %I:%M %p') }}</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Investment Accounts Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-3">Investment Accounts</h3>
+        </div>
+
+        <!-- E*Trade -->
+        <div class="col-md-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">E*Trade</h5>
+                </div>
+                <div class="card-body">
+                    <h3 class="mb-3">${{ "{:,.2f}".format(etrade.total_value) }}</h3>
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Cost Basis</small>
+                            <div>${{ "{:,.0f}".format(etrade.total_cost_basis) }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Assets</small>
+                            <div>{{ etrade.asset_count }}</div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Total Gain/Loss</small>
+                        <h5 class="{% if etrade.total_gain >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ "{:+,.2f}".format(etrade.total_gain) }}
+                            <small>({{ "{:+.1f}".format(etrade.total_gain_percent) }}%)</small>
+                        </h5>
+                    </div>
+                    <a href="/stocks" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coinbase -->
+        <div class="col-md-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header text-white" style="background-color: #0052ff;">
+                    <h5 class="mb-0">Coinbase</h5>
+                </div>
+                <div class="card-body">
+                    <h3 class="mb-3">${{ "{:,.2f}".format(coinbase.total_value) }}</h3>
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Cost Basis</small>
+                            <div>${{ "{:,.0f}".format(coinbase.total_cost_basis) }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Assets</small>
+                            <div>{{ coinbase.asset_count }}</div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Total Gain/Loss</small>
+                        <h5 class="{% if coinbase.total_gain >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ "{:+,.2f}".format(coinbase.total_gain) }}
+                            <small>({{ "{:+.1f}".format(coinbase.total_gain_percent) }}%)</small>
+                        </h5>
+                    </div>
+                    <a href="/crypto-coinbase" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hard Wallet -->
+        <div class="col-md-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header text-white" style="background-color: #6f42c1;">
+                    <h5 class="mb-0">Hard Wallet (L Wallet)</h5>
+                </div>
+                <div class="card-body">
+                    <h3 class="mb-3">${{ "{:,.2f}".format(hardwallet.total_value) }}</h3>
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Cost Basis</small>
+                            <div>${{ "{:,.0f}".format(hardwallet.total_cost_basis) }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Assets</small>
+                            <div>{{ hardwallet.asset_count }}</div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Total Gain/Loss</small>
+                        <h5 class="{% if hardwallet.total_gain >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ "{:+,.2f}".format(hardwallet.total_gain) }}
+                            <small>({{ "{:+.1f}".format(hardwallet.total_gain_percent) }}%)</small>
+                        </h5>
+                    </div>
+                    <a href="/crypto-l" class="btn btn-outline-primary btn-sm w-100">View Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Entries & Business Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-3">Other Assets & Metrics</h3>
+        </div>
+
+        <!-- Manual Entries -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Manual Entries</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            {% if manual_totals.get('401K') %}
+                            <tr>
+                                <td><strong>401K Accounts</strong></td>
+                                <td class="text-end"><h5 class="mb-0">${{ "{:,.2f}".format(manual_totals['401K']) }}</h5></td>
+                            </tr>
+                            {% endif %}
+                            {% if manual_totals.get('Cash') %}
+                            <tr>
+                                <td><strong>Cash</strong></td>
+                                <td class="text-end"><h5 class="mb-0">${{ "{:,.2f}".format(manual_totals['Cash']) }}</h5></td>
+                            </tr>
+                            {% endif %}
+                            {% if manual_totals.get('Property') %}
+                            <tr>
+                                <td><strong>Property</strong></td>
+                                <td class="text-end"><h5 class="mb-0">${{ "{:,.2f}".format(manual_totals['Property']) }}</h5></td>
+                            </tr>
+                            {% endif %}
+                            {% if manual_totals.get('Debt') %}
+                            <tr class="table-danger">
+                                <td><strong>Debt</strong></td>
+                                <td class="text-end"><h5 class="mb-0 text-danger">-${{ "{:,.2f}".format(manual_totals['Debt']) }}</h5></td>
+                            </tr>
+                            {% endif %}
+                            {% if manual_totals.get('Credit Card') %}
+                            <tr class="table-danger">
+                                <td><strong>Credit Cards</strong></td>
+                                <td class="text-end"><h5 class="mb-0 text-danger">-${{ "{:,.2f}".format(manual_totals['Credit Card']) }}</h5></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                    <div class="mt-3">
+                        <a href="/manual-entries" class="btn btn-outline-success btn-sm w-100">Manage Entries</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business Metrics -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Business Metrics</h5>
+                </div>
+                <div class="card-body">
+                    {% if business %}
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Billable Contractors</small>
+                            <h3 class="mb-0">{{ business.contractors_working or 0 }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Monthly Revenue</small>
+                            <h3 class="mb-0">${{ "{:,.0f}".format(business.monthly_revenue or 0) }}</h3>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Monthly Burn</small>
+                            <h4 class="mb-0 text-danger">${{ "{:,.0f}".format(business.monthly_burn or 20000) }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Net Monthly</small>
+                            {% set net_monthly = (business.monthly_revenue or 0) - (business.monthly_burn or 20000) %}
+                            <h4 class="mb-0 {% if net_monthly >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "{:+,.0f}".format(net_monthly) }}
+                            </h4>
+                        </div>
+                    </div>
+                    {% if business.date %}
+                    <small class="text-muted">Last updated: {{ business.date.strftime('%Y-%m-%d') }}</small>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted mb-3">No business metrics recorded yet.</p>
+                    {% endif %}
+                    <div class="mt-3">
+                        <a href="/business" class="btn btn-outline-info btn-sm w-100">View Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <button id="updatePricesBtn" class="btn btn-primary w-100">
+                                <i class="bi bi-arrow-clockwise"></i> Update Prices
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="/portfolio" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-grid-3x3"></i> Full Portfolio
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="/manual-entries" class="btn btn-outline-success w-100">
+                                <i class="bi bi-pencil-square"></i> Edit Entries
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="/business" class="btn btn-outline-info w-100">
+                                <i class="bi bi-graph-up"></i> Business Metrics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update prices functionality
+document.getElementById('updatePricesBtn').addEventListener('click', function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Updating...';
+
+    fetch('/api/update-prices', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Prices updated!\n\nUpdated: ${data.updated}\nFailed: ${data.failed}`);
+            location.reload();
+        } else {
+            alert('Error updating prices: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Update Prices';
+    });
+});
+</script>
+
+<style>
+.gain-positive {
+    color: #28a745 !important;
+}
+.gain-negative {
+    color: #dc3545 !important;
+}
+</style>
+
+{% endblock %}

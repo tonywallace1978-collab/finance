@@ -1,5 +1,5 @@
-from flask import Flask, render_template, jsonify, redirect, url_for
-from models import db, Asset, AssetPrice
+from flask import Flask, render_template, jsonify, redirect, url_for, request
+from models import db, Asset, AssetPrice, ManualEntry, BusinessMetrics, Expense
 from price_fetcher import PriceFetcher
 from datetime import datetime
 import os
@@ -66,6 +66,7 @@ def get_location_summary(location):
         'location': location,
         'total_value': total_value,
         'total_cost_basis': total_cost_basis,
+        'total_gain': total_gain,
         'total_gain_dollar': total_gain,
         'total_gain_percent': total_gain_percent,
         'day_change_dollar': total_day_change,
@@ -75,49 +76,73 @@ def get_location_summary(location):
     }
 
 
+def calculate_investment_value():
+    """Calculate total value of all investments"""
+    total = 0
+    for asset in Asset.query.all():
+        price_data = price_fetcher.get_latest_price(asset.ticker, asset.location)
+        if price_data and asset.quantity:
+            total += price_data.price * asset.quantity
+    return total
+
+
+def calculate_manual_totals():
+    """Calculate totals from manual entries by category"""
+    totals = {}
+    for entry in ManualEntry.query.all():
+        if entry.category not in totals:
+            totals[entry.category] = 0
+        totals[entry.category] += entry.value
+    return totals
+
+
+def get_net_worth():
+    """Calculate total net worth including investments and manual entries"""
+    investments = calculate_investment_value()
+    manual_totals = calculate_manual_totals()
+
+    # Assets
+    assets = investments
+    assets += manual_totals.get('401K', 0)
+    assets += manual_totals.get('Cash', 0)
+    assets += manual_totals.get('Property', 0)
+
+    # Liabilities
+    liabilities = manual_totals.get('Debt', 0)
+    liabilities += manual_totals.get('Credit Card', 0)
+
+    return assets - liabilities
+
+
 @app.route('/')
 def dashboard():
-    """Main dashboard showing overview of all locations"""
+    """Main dashboard showing complete financial overview"""
 
-    # Get summaries for each location
+    # Get investment summaries for each location
     etrade_summary = get_location_summary('Etrade')
     coinbase_summary = get_location_summary('Coinbase')
     hardwallet_summary = get_location_summary('Hard Wallet')
 
-    # Calculate total net worth
-    total_net_worth = (
-        etrade_summary['total_value'] +
-        coinbase_summary['total_value'] +
-        hardwallet_summary['total_value']
-    )
+    # Get manual entries totals
+    manual_totals = calculate_manual_totals()
 
-    total_day_change = (
-        etrade_summary['day_change_dollar'] +
-        coinbase_summary['day_change_dollar'] +
-        hardwallet_summary['day_change_dollar']
-    )
+    # Get business metrics
+    latest_business = BusinessMetrics.query.order_by(BusinessMetrics.date.desc()).first()
 
-    total_cost_basis = (
-        etrade_summary['total_cost_basis'] +
-        coinbase_summary['total_cost_basis'] +
-        hardwallet_summary['total_cost_basis']
-    )
-
-    total_gain = total_net_worth - total_cost_basis
-    total_gain_percent = (total_gain / total_cost_basis * 100) if total_cost_basis > 0 else 0
+    # Calculate complete net worth (investments + manual entries - liabilities)
+    net_worth = get_net_worth()
 
     # Get last update time
     last_price_update = AssetPrice.query.order_by(AssetPrice.timestamp.desc()).first()
     last_update = last_price_update.timestamp if last_price_update else None
 
-    return render_template('dashboard.html',
-                           total_net_worth=total_net_worth,
-                           total_day_change=total_day_change,
-                           total_gain_dollar=total_gain,
-                           total_gain_percent=total_gain_percent,
+    return render_template('dashboard_complete.html',
+                           net_worth=net_worth,
                            etrade=etrade_summary,
                            coinbase=coinbase_summary,
                            hardwallet=hardwallet_summary,
+                           manual_totals=manual_totals,
+                           business=latest_business,
                            last_update=last_update)
 
 
@@ -172,18 +197,77 @@ def portfolio():
                            total_gain_percent=total_gain_percent)
 
 
+@app.route('/manual-entries')
+def manual_entries():
+    """View and edit manual entries"""
+    entries = ManualEntry.query.all()
+    return render_template('manual_entries.html', entries=entries)
+
+
+@app.route('/business')
+def business():
+    """Business metrics dashboard"""
+    metrics = BusinessMetrics.query.order_by(BusinessMetrics.date.desc()).all()
+    return render_template('business.html', metrics=metrics)
+
+
+@app.route('/api/manual-entry/update', methods=['POST'])
+def update_manual_entry():
+    """API endpoint to update manual entry value"""
+    data = request.json
+    entry = ManualEntry.query.get(data['id'])
+
+    if entry:
+        entry.value = float(data['value'])
+        entry.last_updated = datetime.utcnow()
+        entry.updated_by = data.get('user', 'Manual')
+        db.session.commit()
+        return jsonify({'success': True})
+
+    return jsonify({'success': False, 'error': 'Entry not found'})
+
+
+@app.route('/api/update-prices', methods=['POST'])
+def api_update_prices():
+    """API endpoint to trigger price update"""
+    try:
+        # Try batch price fetcher first (more efficient)
+        try:
+            from batch_price_fetcher import update_all_prices_batch
+            updated, failed = update_all_prices_batch()
+        except ImportError:
+            # Fall back to regular price fetcher
+            assets = Asset.query.all()
+            updated, failed = price_fetcher.update_all_prices(assets)
+
+        return jsonify({
+            'success': True,
+            'updated': updated,
+            'failed': failed
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
 @app.route('/update-prices')
 def update_prices():
-    """Manually trigger price update for all assets"""
-    assets = Asset.query.all()
-    updated, failed = price_fetcher.update_all_prices(assets)
+    """Manually trigger price update for all assets (GET request)"""
+    try:
+        # Try batch price fetcher first (more efficient)
+        try:
+            from batch_price_fetcher import update_all_prices_batch
+            update_all_prices_batch()
+        except ImportError:
+            # Fall back to regular price fetcher
+            assets = Asset.query.all()
+            price_fetcher.update_all_prices(assets)
+    except Exception as e:
+        print(f"Price update error: {e}")
 
-    return jsonify({
-        'success': True,
-        'updated': updated,
-        'failed': failed,
-        'timestamp': datetime.utcnow().isoformat()
-    })
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/api/assets')

@@ -35,11 +35,11 @@ class AssetPrice(db.Model):
     __tablename__ = 'asset_price'
 
     id = db.Column(db.Integer, primary_key=True)
-    ticker = db.Column(db.String(20), nullable=False)
+    ticker = db.Column(db.String(20), nullable=False, index=True)
     price = db.Column(db.Float, nullable=False)
     change_dollar = db.Column(db.Float)
     change_percent = db.Column(db.Float)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
     location = db.Column(db.String(50))  # Important for BTC differentiation
 
     def __repr__(self):
@@ -55,3 +55,48 @@ class AssetPrice(db.Model):
             'timestamp': self.timestamp.isoformat(),
             'location': self.location
         }
+
+
+class ManualEntry(db.Model):
+    """Manual entries for non-tradeable assets (401k, Cash, Property, Debt)"""
+    __tablename__ = 'manual_entry'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    value = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String(50))  # 401K, Cash, Property, Debt, Credit Card
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_by = db.Column(db.String(50), default='Manual')
+
+    def __repr__(self):
+        return f'<ManualEntry {self.name} ${self.value}>'
+
+
+class BusinessMetrics(db.Model):
+    """Business tracking metrics"""
+    __tablename__ = 'business_metrics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contractors_working = db.Column(db.Integer)
+    monthly_revenue = db.Column(db.Float)
+    monthly_burn = db.Column(db.Float, default=20000)
+    date = db.Column(db.Date, default=datetime.utcnow)
+    updated_by = db.Column(db.String(50))
+
+    def __repr__(self):
+        return f'<BusinessMetrics {self.date} - {self.contractors_working} contractors>'
+
+
+class Expense(db.Model):
+    """Monthly expense tracking"""
+    __tablename__ = 'expense'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    is_business = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f'<Expense {self.date} ${self.amount} - {self.category}>'

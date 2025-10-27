@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Entries - Financial Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Manual Entries</h1>
+
+    <div class="alert alert-info">
+        <strong>Info:</strong> These are manually tracked assets and liabilities like 401K accounts, cash holdings, property, debt, and credit cards. Click on any value to edit it.
+    </div>
+
+    <!-- Summary by Category -->
+    <div class="row mb-4">
+        {% set totals = {} %}
+        {% for entry in entries %}
+            {% if entry.category not in totals %}
+                {% set _ = totals.update({entry.category: 0}) %}
+            {% endif %}
+            {% set _ = totals.update({entry.category: totals[entry.category] + entry.value}) %}
+        {% endfor %}
+
+        {% for category, total in totals.items() %}
+        <div class="col-md-4 mb-3">
+            <div class="card {% if category in ['Debt', 'Credit Card'] %}border-danger{% else %}border-success{% endif %}">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">{{ category }}</h6>
+                    <h3 class="mb-0 {% if category in ['Debt', 'Credit Card'] %}text-danger{% else %}text-success{% endif %}">
+                        ${{ "{:,.2f}".format(total) }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Entries by Category -->
+    {% for category in ['401K', 'Cash', 'Property', 'Debt', 'Credit Card'] %}
+        {% set category_entries = entries | selectattr('category', 'equalto', category) | list %}
+        {% if category_entries %}
+        <div class="card shadow mb-4">
+            <div class="card-header {% if category in ['Debt', 'Credit Card'] %}bg-danger{% else %}bg-success{% endif %} text-white">
+                <h5 class="mb-0">{{ category }}</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th class="text-end">Value</th>
+                            <th>Last Updated</th>
+                            <th>Updated By</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in category_entries %}
+                        <tr>
+                            <td><strong>{{ entry.name }}</strong></td>
+                            <td class="text-end">
+                                <span class="entry-value {% if category in ['Debt', 'Credit Card'] %}text-danger{% else %}text-success{% endif %}"
+                                      data-id="{{ entry.id }}"
+                                      style="cursor: pointer; border-bottom: 1px dashed #999;">
+                                    ${{ "{:,.2f}".format(entry.value) }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if entry.last_updated %}
+                                {{ entry.last_updated.strftime('%Y-%m-%d %I:%M %p') }}
+                                {% else %}
+                                Never
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-secondary">{{ entry.updated_by or 'Manual' }}</span></td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary edit-btn" data-id="{{ entry.id }}" data-value="{{ entry.value }}" data-name="{{ entry.name }}">
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    <!-- Other Categories -->
+    {% set other_entries = [] %}
+    {% for entry in entries %}
+        {% if entry.category not in ['401K', 'Cash', 'Property', 'Debt', 'Credit Card'] %}
+            {% set _ = other_entries.append(entry) %}
+        {% endif %}
+    {% endfor %}
+
+    {% if other_entries %}
+    <div class="card shadow mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Other</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th class="text-end">Value</th>
+                        <th>Last Updated</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in other_entries %}
+                    <tr>
+                        <td><strong>{{ entry.name }}</strong></td>
+                        <td><span class="badge bg-info">{{ entry.category }}</span></td>
+                        <td class="text-end">
+                            <span class="entry-value" data-id="{{ entry.id }}" style="cursor: pointer; border-bottom: 1px dashed #999;">
+                                ${{ "{:,.2f}".format(entry.value) }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if entry.last_updated %}
+                            {{ entry.last_updated.strftime('%Y-%m-%d %I:%M %p') }}
+                            {% else %}
+                            Never
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary edit-btn" data-id="{{ entry.id }}" data-value="{{ entry.value }}" data-name="{{ entry.name }}">
+                                Edit
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-3">
+        <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="entryId">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" id="entryName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Value</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="entryValue" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Updated By (optional)</label>
+                        <input type="text" class="form-control" id="updatedBy" placeholder="Your name">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Edit functionality
+let editModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    editModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+    // Edit button click
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const name = this.dataset.name;
+            const value = this.dataset.value;
+
+            document.getElementById('entryId').value = id;
+            document.getElementById('entryName').value = name;
+            document.getElementById('entryValue').value = value;
+            document.getElementById('updatedBy').value = '';
+
+            editModal.show();
+        });
+    });
+
+    // Click on value to edit
+    document.querySelectorAll('.entry-value').forEach(span => {
+        span.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const btn = document.querySelector(`.edit-btn[data-id="${id}"]`);
+            if (btn) btn.click();
+        });
+    });
+
+    // Save button
+    document.getElementById('saveBtn').addEventListener('click', function() {
+        const id = document.getElementById('entryId').value;
+        const value = parseFloat(document.getElementById('entryValue').value);
+        const user = document.getElementById('updatedBy').value || 'Manual';
+
+        if (isNaN(value)) {
+            alert('Please enter a valid number');
+            return;
+        }
+
+        // Save via API
+        fetch('/api/manual-entry/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: parseInt(id),
+                value: value,
+                user: user
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                editModal.hide();
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    });
+});
+</script>
+
+{% endblock %}

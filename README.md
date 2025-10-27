@@ -1,15 +1,22 @@
-# Financial Tracker
+# Financial Tracker - Complete Financial Overview
 
-A Flask-based financial portfolio tracking application that handles stocks, ETFs, and cryptocurrencies across multiple accounts (E*Trade, Coinbase, Hard Wallet).
+A comprehensive Flask-based financial tracking application that provides a complete view of your net worth, including investments, retirement accounts, cash, property, debt, and business metrics.
 
 ## Key Features
 
+### Investment Tracking
 - **Multi-location portfolio tracking** across E*Trade, Coinbase, and Hard Wallet
 - **Automatic price fetching** from yfinance (stocks/ETFs) and CoinGecko (crypto)
 - **Special BTC handling** - correctly differentiates between BTC ETF and actual Bitcoin
 - **Real-time portfolio valuations** with gain/loss calculations
-- **Responsive dashboard** with Bootstrap styling
-- **Separate views** for each location and a consolidated portfolio view
+- **77+ assets** tracked efficiently with batch API calls
+
+### Complete Financial Picture
+- **Manual entries** for 401K accounts, cash, property, debt, credit cards
+- **Business metrics tracking** - contractors, revenue, burn rate, runway
+- **Expense tracking** with monthly categorization
+- **Complete net worth calculation** combining all financial sources
+- **Responsive dashboard** with Bootstrap styling and real-time updates
 
 ## The BTC Dual-Ticker Problem (SOLVED)
 
@@ -66,29 +73,49 @@ finance/
 pip install -r requirements.txt
 ```
 
-### 2. Initialize Database
+### 2. Initialize Complete Database
 
-**Option A: Use sample data to test**
+**Option A: New Installation (with sample data)**
 ```bash
+# Creates all tables and adds sample data for testing
 python init_db.py sample
+
+# Then run complete setup for manual entries and business metrics
+python setup_complete_db.py
 ```
 
-**Option B: Import your existing database**
+**Option B: Upgrade Existing Database**
+```bash
+# If you already have a finance.db with assets, just run complete setup
+# This will add the new tables (ManualEntry, BusinessMetrics, Expense)
+python setup_complete_db.py
+```
+
+**Option C: Import Your Existing Database**
 ```bash
 # Copy your database file
 cp /path/to/your/finance.db instance/finance.db
 
-# Update prices
-python init_db.py update-prices
+# Run complete setup to add new tables and update prices
+python setup_complete_db.py
 ```
 
-**Option C: Start fresh**
-```bash
-python init_db.py init
-# Then manually add your assets or import from Excel
-```
+### 3. Configure Your Financial Data
 
-### 3. Run the Application
+After setup, edit the sample data to match your actual finances:
+
+1. **Manual Entries**: Go to `/manual-entries` and update:
+   - 401K account balances (Tony 401K, Heather 401K)
+   - Cash holdings (Bank Accounts)
+   - Credit card balances
+   - Any property or other assets
+
+2. **Business Metrics**: Go to `/business` and add records for:
+   - Number of billable contractors
+   - Monthly revenue
+   - Monthly burn rate
+
+### 4. Run the Application
 
 ```bash
 python app.py
@@ -96,18 +123,32 @@ python app.py
 
 Visit: http://localhost:5000
 
+The dashboard will show your complete net worth including all financial sources.
+
 ## Application Routes
 
-- `/` - Dashboard with overview of all locations
-- `/stocks` - E*Trade portfolio (stocks and ETFs)
-- `/crypto-coinbase` - Coinbase crypto holdings
-- `/crypto-l` - Hard Wallet (L Wallet) crypto holdings
-- `/portfolio` - Complete portfolio across all locations
-- `/update-prices` - Manually trigger price updates
+### Main Pages
+- `/` - **Dashboard** - Complete financial overview with net worth, investments, manual entries, and business metrics
+- `/stocks` - **E*Trade Portfolio** - Stock and ETF holdings with current prices and gains
+- `/crypto-coinbase` - **Coinbase Portfolio** - Cryptocurrency holdings on Coinbase
+- `/crypto-l` - **Hard Wallet Portfolio** - Cold storage crypto holdings (L Wallet)
+- `/portfolio` - **Complete Portfolio** - All investments across all locations in one view
+- `/manual-entries` - **Manual Entries** - Edit 401K, cash, debt, and other manual entries
+- `/business` - **Business Metrics** - Track contractors, revenue, burn rate, and runway
+
+### API Endpoints
+- `POST /api/update-prices` - Trigger batch price update for all assets
+- `POST /api/manual-entry/update` - Update a manual entry value
+- `GET /api/assets` - Get all assets as JSON
+- `GET /api/prices/<ticker>/<location>` - Get latest price for specific asset
+
+### Utility Routes
+- `/update-prices` - Manually trigger price update (redirects to dashboard)
 
 ## Database Schema
 
 ### Asset Table
+Stores investment assets (stocks, ETFs, cryptocurrencies)
 ```sql
 - id (Primary Key)
 - ticker (e.g., 'BTC', 'AAPL')
@@ -116,17 +157,54 @@ Visit: http://localhost:5000
 - price_paid (average cost basis)
 - location (Etrade, Coinbase, Hard Wallet)
 - company_name (optional)
+- purchase_date (optional)
+- notes (optional)
+- last_updated (timestamp)
 ```
 
 ### AssetPrice Table
+Historical price tracking with location awareness
 ```sql
 - id (Primary Key)
 - ticker
 - price
 - change_dollar (daily change)
 - change_percent (daily change %)
-- timestamp
+- timestamp (indexed)
 - location (crucial for BTC differentiation)
+```
+
+### ManualEntry Table
+Non-tradeable assets and liabilities
+```sql
+- id (Primary Key)
+- name (e.g., "Tony 401K", "Bank Account")
+- value (current value)
+- category (401K, Cash, Property, Debt, Credit Card)
+- last_updated (timestamp)
+- updated_by (who updated it)
+```
+
+### BusinessMetrics Table
+Business performance tracking
+```sql
+- id (Primary Key)
+- contractors_working (number of billable contractors)
+- monthly_revenue (current monthly revenue)
+- monthly_burn (monthly expenses, default 20000)
+- date (date of metric)
+- updated_by (who updated it)
+```
+
+### Expense Table
+Monthly expense tracking (future feature)
+```sql
+- id (Primary Key)
+- date (expense date)
+- amount (expense amount)
+- category (expense category)
+- description (optional notes)
+- is_business (boolean, business vs personal)
 ```
 
 ## CoinGecko Crypto Mappings
@@ -157,13 +235,25 @@ CRYPTO_MAP = {
 }
 ```
 
-## Expected Portfolio Values
+## Expected Financial Overview
 
-Based on your data, the application should show approximately:
-- **E*Trade**: $590,301
-- **Coinbase**: $91,516
-- **Hard Wallet**: $479,295
-- **Total Net Worth**: ~$1,161,112
+Based on your complete financial data, the application should show approximately:
+
+### Investment Accounts
+- **E*Trade**: ~$590,000 (stocks, ETFs, BTC ETF)
+- **Coinbase**: ~$92,000 (cryptocurrencies)
+- **Hard Wallet**: ~$479,000 (cold storage crypto including actual Bitcoin)
+- **Total Investments**: ~$1,161,000
+
+### Manual Entries
+- **401K Accounts**: ~$389,000 (Tony + Heather)
+- **Cash**: ~$492,000 (bank accounts)
+- **Credit Cards**: Variable (liabilities)
+
+### Complete Net Worth
+**Total Net Worth**: ~$1,595,000 (investments + 401K + cash - liabilities)
+
+This includes all financial sources and represents your complete financial picture.
 
 ## API Endpoints
 
