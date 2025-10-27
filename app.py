@@ -25,6 +25,12 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+# Remember Me cookie settings
+app.config['REMEMBER_COOKIE_DURATION'] = 2592000  # 30 days in seconds
+app.config['REMEMBER_COOKIE_SECURE'] = True if os.getenv('FLASK_ENV') == 'production' else False
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+
 # Initialize database
 db.init_app(app)
 
@@ -147,11 +153,13 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        remember = request.form.get('remember', False)  # Get "Remember Me" checkbox
 
         user = User.query.filter_by(username=username).first()
 
         if user and user.check_password(password):
-            login_user(user)
+            # Login with remember me option (30 days)
+            login_user(user, remember=bool(remember))
             user.last_login = datetime.utcnow()
             db.session.commit()
 
